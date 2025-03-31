@@ -1,74 +1,177 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React from "react";
+import {
+  TouchableOpacity,
+  Alert,
+  Text,
+  View,
+  StyleSheet,
+  ScrollView,
+  StatusBar,
+  SafeAreaView,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-
-export default function HomeScreen() {
+const App = () => {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#2e6e4a" />
+
+      <ScrollView style={styles.scrollView}>
+        {/* Welcome Banner */}
+        <View style={styles.welcomeBanner}>
+          <Text style={styles.welcomeTitle}>Welcome, Trekker!</Text>
+          <Text style={styles.welcomeSubtitle}>
+            Plan your next adventure in Nepal
+          </Text>
+        </View>
+
+        {/* Menu Grid */}
+        <View style={styles.menuGrid}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.menuItem}
+              onPress={() => Alert.alert(item.title, item.message)}
+            >
+              <View style={styles.iconCircle}>
+                <MaterialCommunityIcons
+                  name={item.icon}
+                  size={24}
+                  color="#fff"
+                />
+              </View>
+              <Text style={styles.menuText}>{item.title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* Developer Credit */}
+      <View style={styles.developerCredit}>
+        <Text style={styles.developerText}>Developed by Sahil Niraula</Text>
+      </View>
+    </SafeAreaView>
   );
-}
+};
+
+const menuItems: {
+  title: string;
+  message: string;
+  icon:
+    | "map-marker-path"
+    | "weather-partly-cloudy"
+    | "image-filter-hdr"
+    | "account-tie"
+    | "alarm-light"
+    | "file-document";
+}[] = [
+  {
+    title: "Trek Planner",
+    message: "Trek Planner feature coming soon!",
+    icon: "map-marker-path",
+  },
+  {
+    title: "Weather Updates",
+    message: "Weather Updates feature coming soon!",
+    icon: "weather-partly-cloudy",
+  },
+  {
+    title: "AR Mountain View",
+    message: "AR Mountain View feature coming soon!",
+    icon: "image-filter-hdr",
+  },
+  {
+    title: "Book Guides",
+    message: "Book Guides feature coming soon!",
+    icon: "account-tie",
+  },
+  {
+    title: "Emergency SOS",
+    message: "Emergency SOS feature coming soon!",
+    icon: "alarm-light",
+  },
+  {
+    title: "Trek Permits",
+    message: "Trek Permits feature coming soon!",
+    icon: "file-document",
+  },
+];
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  scrollView: {
+    flex: 1,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  header: {
+    backgroundColor: "#2e6e4a",
+    paddingVertical: 15,
+    alignItems: "center",
+    elevation: 5,
+  },
+  headerText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  welcomeBanner: {
+    backgroundColor: "#e6f5e9",
+    padding: 20,
+    margin: 15,
+    borderRadius: 10,
+  },
+  welcomeTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#2e6e4a",
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: "#2e6e4a",
+    marginTop: 5,
+  },
+  menuGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    padding: 10,
+  },
+  menuItem: {
+    backgroundColor: "#d1ead9",
+    width: "48%",
+    height: 100,
+    borderRadius: 10,
+    padding: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 15,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#2e6e4a",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  menuText: {
+    color: "#2e6e4a",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  developerCredit: {
+    padding: 10,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+  },
+  developerText: {
+    fontSize: 12,
+    color: "#555",
   },
 });
+
+export default App;
+

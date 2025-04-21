@@ -26,125 +26,170 @@ const ItineraryModal: React.FC<ItineraryModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<string>("overview");
-  console.log("Active tab", activeTab);
 
-  // Parsing the itinerary content
-  const sections: Record<string, string[]> = {
-    overview: [],
-    budget: [],
-    dailyPlan: [],
-    considerations: [],
+  // Parsing the itinerary content with improved section detection
+  const parseItinerary = (content: string) => {
+    const sections: Record<string, string[]> = {
+      overview: [],
+      budget: [],
+      dailyPlan: [],
+      considerations: [],
+    };
+
+    // Split content into lines
+    const lines = content.split("\n");
+
+    // Define section markers with regex patterns for more robust detection
+    const sectionMarkers = [
+      {
+        section: "overview",
+        pattern: /^##\s*15-Day|^1\.\s*REGIONAL\s*OVERVIEW|REGIONAL\s*OVERVIEW/,
+      },
+      {
+        section: "budget",
+        pattern: /BUDGET\s*BREAKDOWN|^2\.\s*COMPLETE\s*BUDGET/,
+      },
+      {
+        section: "dailyPlan",
+        pattern: /DAY-BY-DAY\s*ITINERARY|^3\.\s*DETAILED\s*DAY/,
+      },
+      {
+        section: "considerations",
+        pattern:
+          /IMPORTANT\s*CONSIDERATIONS|Health\s*&\s*Safety|Permits\s*&\s*Documentation/,
+      },
+    ];
+
+    let currentSection = "overview";
+
+    // Process each line and determine the section it belongs to
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip empty lines
+      if (!line) continue;
+
+      // Check if this line starts a new section
+      for (const marker of sectionMarkers) {
+        if (marker.pattern.test(line)) {
+          currentSection = marker.section;
+          break;
+        }
+      }
+
+      // Special handling for daily plan - detect day entries
+      if (/^Day\s+\d+:/.test(line)) {
+        currentSection = "dailyPlan";
+      }
+
+      // Clean the line (remove markdown formatting)
+      const cleanedLine = line
+        .replace(/^\*+/g, "") // Remove leading asterisks
+        .replace(/\*\*/g, "") // Remove double asterisks
+        .replace(/^\s*[\*\-]\s*/, "") // Remove bullet points
+        .trim();
+
+      if (cleanedLine) {
+        sections[currentSection].push(cleanedLine);
+      }
+    }
+
+    return sections;
   };
 
-  // Splitting the itinerary text into sections
-  const lines = itinerary.split("\n");
-  let currentSection = "overview";
-
-  lines.forEach((line) => {
-    // Determine the current section based on keywords
-    if (line.includes("Budget Breakdown")) {
-      currentSection = "budget";
-    } else if (
-      line.includes("Day 1:") ||
-      line.includes("Day 2:") ||
-      line.includes("Day 3:")
-    ) {
-      currentSection = "dailyPlan";
-    } else if (line.includes("Important Considerations")) {
-      currentSection = "considerations";
-    }
-
-    const cleanedLine = line
-      .trim()
-      .replace(/^\*+/g, "")
-      .trim()
-      .replace(/^\*\*/g, "")
-      .trim();
-
-    if (cleanedLine) {
-      sections[currentSection].push(cleanedLine);
-    }
-  });
+  // Parse the itinerary
+  const sections = parseItinerary(itinerary);
 
   const renderOverviewTab = () => (
     <View style={styles.tabContent}>
       <View style={styles.overviewContainer}>
         <Text style={styles.sectionTitle}>
-          {sections.overview[0]?.replace("##", "").trim() || "Trek Overview"}
+          {sections.overview[0]?.replace(/^##\s*/, "").trim() ||
+            "Trek Overview"}
         </Text>
         {sections.overview.slice(1).map((line, index) => (
           <Text key={index} style={styles.paragraph}>
-            {line.split("*").join("")}
+            {line}
           </Text>
         ))}
       </View>
     </View>
   );
 
-  const renderBudgetTab = () => {
-    console.log("sections", sections);
-    return (
-      <View style={styles.tabContent}>
-        <View style={styles.budgetContainer}>
-          <Text style={styles.budgetTitle}>Budget Breakdown</Text>
-          {sections.budget.map((line, index) => {
-            if (line.includes("Total Estimated Cost")) {
-              return (
-                <Text key={index} style={styles.totalCost}>
-                  {line}
-                </Text>
-              );
-            }
-            const parts = line.split(":");
-            if (parts.length === 2) {
-              return (
-                <View key={index} style={styles.budgetItem}>
-                  <Text style={styles.budgetCategory}>{parts[0].trim()}</Text>
-                  <Text style={styles.budgetAmount}>{parts[1].trim()}</Text>
-                </View>
-              );
-            }
+  const renderBudgetTab = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.budgetContainer}>
+        <Text style={styles.budgetTitle}>Budget Breakdown</Text>
+        {sections.budget.map((line, index) => {
+          if (line.includes("Total Estimated Cost")) {
             return (
-              <Text key={index} style={styles.budgetText}>
+              <Text key={index} style={styles.totalCost}>
                 {line}
               </Text>
             );
-          })}
-        </View>
+          }
+
+          // Match both "Item: $100" and "Item (explanation): $100" formats
+          const parts = line.split(/:\s*(?=\$|\d)/);
+          if (parts.length === 2) {
+            return (
+              <View key={index} style={styles.budgetItem}>
+                <Text style={styles.budgetCategory}>{parts[0].trim()}</Text>
+                <Text style={styles.budgetAmount}>{parts[1].trim()}</Text>
+              </View>
+            );
+          }
+          return (
+            <Text key={index} style={styles.budgetText}>
+              {line}
+            </Text>
+          );
+        })}
       </View>
-    );
-  };
+    </View>
+  );
 
   const renderDailyPlanTab = () => {
+    // Improved parsing of daily plan items
     const dailyPlans: { title: string; content: string; items: string[] }[] =
       [];
+    let currentDay: { title: string; content: string; items: string[] } | null =
+      null;
 
-    for (let i = 0; i < sections.dailyPlan.length; i++) {
-      const line = sections.dailyPlan[i];
+    for (const line of sections.dailyPlan) {
+      // Check if this line is a day header
+      const dayMatch = line.match(/^(Day\s+\d+:)(.+)/);
 
-      if (line.includes("Day")) {
-        const dayTitle = line.split(":")[0].trim();
-        const dayContent = line.split(":")[1]?.trim() || "";
+      if (dayMatch) {
+        // If we already have a day object, push it to the array before creating a new one
+        if (currentDay) {
+          dailyPlans.push(currentDay);
+        }
 
-        let nextDayIndex = sections.dailyPlan.findIndex(
-          (l, idx) => idx > i && l.includes("Day")
-        );
-        if (nextDayIndex === -1) nextDayIndex = sections.dailyPlan.length;
-
-        const items = sections.dailyPlan
-          .slice(i + 1, nextDayIndex)
-          .filter((l) => l.includes("*"))
-          .map((item) => item.split("*").join(""));
-
-        dailyPlans.push({
-          title: dayTitle,
-          content: dayContent,
-          items: items,
-        });
+        // Create a new day object
+        currentDay = {
+          title: dayMatch[1].trim(),
+          content: dayMatch[2].trim(),
+          items: [],
+        };
+      }
+      // If not a day header and we have a current day, add as an item
+      else if (currentDay && line.trim()) {
+        // Skip section headers and other non-item content
+        if (
+          !line.includes("DAY-BY-DAY") &&
+          !line.includes("DETAILED DAY") &&
+          !line.includes("(Note:")
+        ) {
+          currentDay.items.push(line);
+        }
       }
     }
 
-    // console.log("tab", tab);
+    // Add the last day
+    if (currentDay) {
+      dailyPlans.push(currentDay);
+    }
 
     return (
       <View style={styles.tabContent}>
@@ -152,9 +197,7 @@ const ItineraryModal: React.FC<ItineraryModalProps> = ({
           {dailyPlans.map((day, index) => (
             <View key={index} style={styles.dayCard}>
               <Text style={styles.dayTitle}>{day.title}</Text>
-              <Text style={styles.dayContent}>
-                {day.content.split("*").join("")}
-              </Text>
+              <Text style={styles.dayContent}>{day.content}</Text>
               {day.items.length > 0 && (
                 <View style={styles.dayItems}>
                   {day.items.map((item, idx) => (
@@ -172,26 +215,36 @@ const ItineraryModal: React.FC<ItineraryModalProps> = ({
     );
   };
 
-  const renderConsiderationsTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.considerationsContainer}>
-        <Text style={styles.considerationsTitle}>Important Considerations</Text>
-        {sections.considerations.slice(1).map((line, index) => (
-          <View key={index} style={styles.considerationItem}>
-            <Text style={styles.warningIcon}>⚠️</Text>
-            <Text style={styles.considerationText}>
-              {line.split("*").join("")}
-            </Text>
-          </View>
-        ))}
-        <Text style={styles.footerNote}>
-          This itinerary provides a framework. Adjust it based on your fitness
-          level, weather conditions, and personal preferences. Remember to
-          prioritize safety and enjoy the incredible beauty of the region!
-        </Text>
+  const renderConsiderationsTab = () => {
+    // Filter out lines that might belong to other sections
+    const considerationItems = sections.considerations.filter(
+      (line) =>
+        !line.includes("Day") &&
+        !line.includes("Remember:") &&
+        !line.includes("Total Estimated")
+    );
+
+    return (
+      <View style={styles.tabContent}>
+        <View style={styles.considerationsContainer}>
+          <Text style={styles.considerationsTitle}>
+            Important Considerations
+          </Text>
+          {considerationItems.map((line, index) => (
+            <View key={index} style={styles.considerationItem}>
+              <Text style={styles.warningIcon}>⚠️</Text>
+              <Text style={styles.considerationText}>{line}</Text>
+            </View>
+          ))}
+          <Text style={styles.footerNote}>
+            This itinerary provides a framework. Adjust it based on your fitness
+            level, weather conditions, and personal preferences. Remember to
+            prioritize safety and enjoy the incredible beauty of the region!
+          </Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -225,8 +278,9 @@ const ItineraryModal: React.FC<ItineraryModalProps> = ({
                           activeTab === tab && styles.activeTabText,
                         ]}
                       >
-                        {tab.charAt(0).toUpperCase() +
-                          tab.slice(1).replace(/([A-Z])/g, " $1")}
+                        {tab === "dailyPlan"
+                          ? "Daily Plan"
+                          : tab.charAt(0).toUpperCase() + tab.slice(1)}
                       </Text>
                     </TouchableOpacity>
                   )
@@ -387,7 +441,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   budgetItem: {
-    flexDirection: "column",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
@@ -425,7 +480,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#2e7d32",
-    textAlign: "center",
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#c8e6c9",
     letterSpacing: 0.3,
   },
   // Daily Plan Tab Styles
@@ -538,7 +596,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderTopWidth: 1,
     borderTopColor: "#e0e0e0",
-    height: 90,
+    height: 80,
   },
   closeButton: {
     flex: 1,

@@ -45,7 +45,7 @@ export default function Home() {
       ),
       bgColor: colors.light_gray,
       description: "Current & forecast mountain weather conditions",
-      onPress: () => router.navigate("/trek-planner"),
+      onPress: () => router.navigate("/weatherUpdates"),
     },
     {
       id: 3,
@@ -53,7 +53,7 @@ export default function Home() {
       icon: <FontAwesome6 name="mountain" size={28} color={colors.dark} />,
       bgColor: colors.light_gray,
       description: "Explore peaks, trails, and difficulty levels",
-      onPress: () => router.navigate("/trek-planner"),
+      onPress: () => router.navigate("/mountainInfo"),
     },
     {
       id: 4,

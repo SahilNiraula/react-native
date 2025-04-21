@@ -61,6 +61,7 @@ export const generateItinerary = async (
 
     const result = await model.generateContent(prompt);
     const response = result.response;
+    console.log("Gemini response:", response.text());
     return response.text();
   } catch (error) {
     console.error("Error fetching itinerary:", error);
